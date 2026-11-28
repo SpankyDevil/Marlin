@@ -57,7 +57,7 @@ extern const char M23_STR[], M24_STR[];
 #if NEED_SD2CARD_SDIO
   #include "Sd2Card_sdio.h"
 #endif
-#if NEED_SD2CARD_SPI || ENABLED(VOLUME_SD_LCD)
+#if ANY(NEED_SD2CARD_SPI, VOLUME_SD_LCD)
   #include "Sd2Card.h"
 #endif
 
@@ -147,9 +147,7 @@ public:
   static void selectMediaSDCard() {
     #if HAS_SDCARD
       changeMedia(&media_driver_sdcard);
-      #if ENABLED(VOLUME_SD_LCD)
-        sdCardLCDSelected = false;
-      #endif
+      TERN_(VOLUME_SD_LCD, sdCardLCDSelected = false);
     #endif
   }
 
@@ -161,19 +159,13 @@ public:
   }
 
   static void selectMediaFlashDrive() {
-    #if HAS_USB_FLASH_DRIVE
-      changeMedia(&media_driver_usbFlash);
-    #endif
+    TERN_(HAS_USB_FLASH_DRIVE, changeMedia(&media_driver_usbFlash));
   }
 
   static bool isSDCardSelected() {
-    #if ENABLED(VOLUME_SD_LCD)
-      return TERN0(HAS_SDCARD, TERN1(HAS_MULTI_VOLUME,
-        driver == &media_driver_sdcard || driver == &media_driver_sdcard_lcd
-      ));
-    #else
-      return TERN0(HAS_SDCARD, TERN1(HAS_MULTI_VOLUME, driver == &media_driver_sdcard));
-    #endif
+    return TERN0(HAS_SDCARD,
+      TERN1(HAS_MULTI_VOLUME, driver == &media_driver_sdcard) || TERN0(VOLUME_SD_LCD, driver == &media_driver_sdcard_lcd)
+    );
   }
   static bool isFlashDriveSelected() {
     return TERN0(HAS_USB_FLASH_DRIVE, TERN1(HAS_MULTI_VOLUME, driver == &media_driver_usbFlash));
@@ -192,13 +184,7 @@ public:
 
   // No card detect line? Assume the card is inserted.
   static bool isSDCardInserted() {
-    return (
-      #if HAS_SD_DETECT
-        READ(SD_DETECT_PIN) == SD_DETECT_STATE
-      #else
-        ENABLED(HAS_SDCARD)
-      #endif
-    );
+    return TERN(HAS_SD_DETECT, READ(SD_DETECT_PIN) == SD_DETECT_STATE, ENABLED(HAS_SDCARD));
   }
 
   // Use the isInserted state from the driver
